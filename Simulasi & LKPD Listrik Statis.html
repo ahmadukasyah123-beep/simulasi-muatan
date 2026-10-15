@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LKPD & Simulasi Listrik Statis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        
+        .sim-container {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            touch-action: none; /* Prevent scrolling when dragging */
+        }
+        
+        .charge {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            position: absolute;
+            transition: transform 0.2s ease, left 0.3s ease, top 0.3s ease;
+            user-select: none;
+            pointer-events: none;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        
+        .charge-pos { background-color: #ef4444; color: white; }
+        .charge-pos::after { content: '+'; }
+        
+        .charge-neg { background-color: #3b82f6; color: white; }
+        .charge-neg::after { content: '-'; }
+
+        .sweater {
+            background-color: #fcd34d;
+            background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.05) 10px, rgba(0,0,0,0.05) 20px);
+            border-radius: 20px 20px 10px 10px;
+            box-shadow: inset -5px -5px 15px rgba(0,0,0,0.1), 5px 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .wall {
+            background-color: #d1d5db;
+            background-image: linear-gradient(90deg, transparent 50%, rgba(255,255,255,.5) 50%);
+            background-size: 20px 20px;
+            border-left: 4px solid #9ca3af;
+        }
+
+        .balloon {
+            background: radial-gradient(circle at 30% 30%, #60a5fa, #2563eb);
+            border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+            box-shadow: inset -5px -5px 15px rgba(0,0,0,0.2), 5px 5px 10px rgba(0,0,0,0.1);
+            cursor: grab;
+            transition: filter 0.2s;
+        }
+        
+        .balloon:active { cursor: grabbing; filter: brightness(0.9); }
+        .balloon-tie {
+            width: 0; height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-bottom: 15px solid #2563eb;
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* Loading spinner for TTS */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Print Styles */
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; }
+            .col-span-12 { grid-column: span 12 !important; }
+            .shadow-lg { box-shadow: none !important; }
+            textarea { border: 1px solid #ccc !important; resize: none; }
+        }
+    </style>
+</head>
+<body class="text-gray-800 h-screen flex flex-col overflow-x-hidden">
+
+    <header class="bg-indigo-700 text-white p-4 shadow-md z-10 no-print flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold"><i class="fa-solid fa-bolt text-yellow-300 mr-2"></i> Simulasi & LKPD Listrik Statis</h1>
+            <p class="text-sm text-indigo-200">Pendekatan Problem-Based Learning (PBL) & Deep Learning</p>
+        </div>
+        <button onclick="window.print()" class="bg-white text-indigo-700 px-4 py-2 rounded-lg font-semibold hover:bg-indigo-50 transition shadow-sm flex items-center">
+            <i class="fa-solid fa-print mr-2"></i> Cetak LKPD
+        </button>
+    </header>
+
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-y-auto">
+        
+        <div class="lg:col-span-5 bg-white p-6 md:p-8 overflow-y-auto border-r border-gray-200 shadow-lg z-0 print-col">
+            
+            <div class="mb-8 text-center print-only hidden">
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Lembar Kerja Peserta Didik (LKPD)</h2>
+                <h3 class="text-lg text-gray-700">Materi: Listrik Statis (Muatan dan Gosokan)</h3>
+                <div class="flex justify-between mt-4 border-b pb-2">
+                    <p>Nama: .......................................</p>
+                    <p>Kelas: .......................................</p>
+                </div>
+            </div>
+
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center no-print">
+                <span class="bg-indigo-100 text-indigo-800 w-8 h-8 rounded-full flex items-center justify-center mr-3 text-lg">📝</span> Lembar Kerja
+            </h2>
+
+            <!-- FASE 1: Orientasi Masalah -->
+            <section class="mb-8 bg-blue-50 p-5 rounded-xl border border-blue-100 relative">
+                <div class="absolute -top-3 -left-3 bg-blue-600 text-white font-bold py-1 px-3 rounded-lg shadow-md text-sm">Tahap 1</div>
+                <h3 class="font-bold text-lg text-blue-900 mb-2 mt-2">Orientasi Peserta Didik pada Masalah</h3>
+                <p class="text-gray-700 text-sm mb-4">
+                    Pernahkah kamu menyisir rambut yang kering dengan sisir plastik, lalu melihat rambutmu tertarik ke arah sisir? Atau ketika kamu memakai baju wol di ruang ber-AC, lalu menyentuh gagang pintu logam dan merasakan kejutan listrik kecil? Mengapa benda-benda yang awalnya netral bisa tiba-tiba memiliki gaya tarik-menarik atau menolak? Mari kita selidiki menggunakan simulasi balon dan baju wol di samping.
+                </p>
+                
+                <button id="btnTts" onclick="playWebARVoice()" class="no-print w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition flex items-center justify-center">
+                    <i class="fa-solid fa-headphones mr-2" id="ttsIcon"></i>
+                    <span id="ttsText">Dengarkan Asisten WebAR</span>
+                </button>
+            </section>
+
+            <!-- FASE 2: Mengorganisasikan -->
+            <section class="mb-8 relative border border-gray-200 p-5 rounded-xl">
+                <div class="absolute -top-3 -left-3 bg-indigo-600 text-white font-bold py-1 px-3 rounded-lg shadow-md text-sm">Tahap 2</div>
+                <h3 class="font-bold text-lg text-indigo-900 mb-2 mt-2">Mengorganisasikan Penyelidikan</h3>
+                <p class="text-sm text-gray-600 mb-3">Buatlah hipotesis (dugaan sementara) berdasarkan masalah di atas. Apa yang sebenarnya berpindah saat dua benda digosokkan?</p>
+                <textarea class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" rows="3" placeholder="Tuliskan hipotesismu di sini..."></textarea>
+            </section>
+
+            <!-- FASE 3: Penyelidikan -->
+            <section class="mb-8 relative border border-gray-200 p-5 rounded-xl">
+                <div class="absolute -top-3 -left-3 bg-purple-600 text-white font-bold py-1 px-3 rounded-lg shadow-md text-sm">Tahap 3</div>
+                <h3 class="font-bold text-lg text-purple-900 mb-2 mt-2">Membimbing Penyelidikan Mandiri</h3>
+                <p class="text-sm text-gray-600 mb-3">Gunakan simulasi di sebelah kanan. Lakukan langkah-langkah berikut dan catat hasil pengamatanmu:</p>
+                
+                <ol class="list-decimal list-inside text-sm text-gray-700 space-y-2 mb-4">
+                    <li>Perhatikan jumlah muatan positif (+) dan negatif (-) pada Balon, Baju, dan Dinding sebelum digosok. Apakah mereka netral?</li>
+                    <li>Gesekkan (drag) Balon ke arah Baju berulang kali. Muatan apa yang berpindah?</li>
+                    <li>Lepaskan Balon di tengah ruangan. Apa yang terjadi pada Balon?</li>
+                    <li>Dekatkan Balon (yang sudah digosok) ke Dinding. Perhatikan pergerakan muatan pada dinding!</li>
+                </ol>
+
+                <div class="bg-gray-50 p-3 rounded-lg border">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Tabel Pengamatan:</label>
+                    <textarea class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none" rows="4" placeholder="Misal: Saat balon digosok ke baju, muatan ... berpindah dari ... ke ... Sehingga balon bermuatan ..."></textarea>
+                </div>
+            </section>
+
+            <!-- FASE 4: Menyajikan Hasil (Deep Learning focus) -->
+            <section class="mb-8 relative border border-gray-200 p-5 rounded-xl">
+                <div class="absolute -top-3 -left-3 bg-teal-600 text-white font-bold py-1 px-3 rounded-lg shadow-md text-sm">Tahap 4</div>
+                <h3 class="font-bold text-lg text-teal-900 mb-2 mt-2">Mengembangkan & Menyajikan Hasil</h3>
+                <p class="text-sm text-gray-600 mb-3">Jawablah pertanyaan analisis berikut dengan konsep *Deep Learning* (berpikir kritis mengapa hal tersebut terjadi).</p>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">1. Mengapa hanya muatan negatif (elektron) yang berpindah, sedangkan muatan positif (proton) tetap diam?</label>
+                        <textarea class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none" rows="2"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">2. Mengapa balon yang telah digosok bisa menempel pada dinding, padahal dinding awalnya netral? (Jelaskan konsep Polarisasi).</label>
+                        <textarea class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none" rows="3"></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- FASE 5: Evaluasi -->
+            <section class="relative border border-gray-200 p-5 rounded-xl bg-green-50">
+                <div class="absolute -top-3 -left-3 bg-green-600 text-white font-bold py-1 px-3 rounded-lg shadow-md text-sm">Tahap 5</div>
+                <h3 class="font-bold text-lg text-green-900 mb-2 mt-2">Menganalisis & Mengevaluasi</h3>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Tuliskan kesimpulan akhir dari pembelajaran hari ini mengenai sifat muatan listrik dan perpindahannya:</label>
+                <textarea class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-white" rows="4" placeholder="Kesimpulan..."></textarea>
+            </section>
+
+        </div>
+
+        <div class="lg:col-span-7 relative h-[60vh] lg:h-auto no-print">
+            <div class="absolute inset-0 sim-container" id="simArea">
+                <!-- Controls Overlay -->
+                <div class="absolute top-4 left-4 right-4 flex justify-between items-center z-20">
+                    <div class="bg-white/80 backdrop-blur px-4 py-2 rounded-lg shadow-sm font-bold text-gray-700">
+                        Area Simulasi
+                    </div>
+                    <button onclick="resetSimulation()" class="bg-white/90 hover:bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md font-semibold transition flex items-center border border-gray-200">
+                        <i class="fa-solid fa-rotate-right mr-2"></i> Reset
+                    </button>
+                </div>
+
+                <!-- Simulation Elements -->
+                <!-- Sweater -->
+                <div id="sweater" class="sweater absolute left-10 top-1/2 transform -translate-y-1/2 w-48 h-72 lg:w-56 lg:h-80 relative">
+                    <!-- Charges injected by JS -->
+                </div>
+
+                <!-- Wall -->
+                <div id="wall" class="wall absolute right-0 top-0 bottom-0 w-24 lg:w-32 relative">
+                    <!-- Charges injected by JS -->
+                </div>
+
+                <!-- Balloon -->
+                <div id="balloon" class="balloon absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-28 h-36 lg:w-32 lg:h-40 z-10 flex items-center justify-center relative">
+                    <div class="balloon-tie"></div>
+                    <!-- Charges injected by JS -->
+                </div>
+            </div>
+            
+            <!-- Instructions Overlay Bottom -->
+            <div class="absolute bottom-4 left-4 right-4 text-center pointer-events-none z-20">
+                <span class="bg-black/60 text-white px-4 py-2 rounded-full text-sm backdrop-blur inline-block shadow-lg">
+                    <i class="fa-solid fa-hand-pointer mr-1"></i> Sentuh & Seret (Drag) balon ke arah baju untuk menggosok.
+                </span>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Notifikasi Kustom -->
+    <div id="customModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 transition-opacity opacity-0">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full transform scale-95 transition-transform" id="modalContent">
+            <h3 class="text-xl font-bold mb-2" id="modalTitle">Informasi</h3>
+            <p class="text-gray-600 mb-6" id="modalBody">Pesan.</p>
+            <div class="flex justify-end">
+                <button onclick="closeModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 font-medium">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA & STATE ---
+        const state = {
+            sweaterCharges: [],
+            balloonCharges: [],
+            wallCharges: [],
+            isDragging: false,
+            rubbingCooldown: 0,
+            audioPlaying: false
+        };
+
+        const elements = {
+            simArea: document.getElementById('simArea'),
+            sweater: document.getElementById('sweater'),
+            balloon: document.getElementById('balloon'),
+            wall: document.getElementById('wall')
+        };
+
+        // Modal Logic
+        function showModal(title, text) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalBody').innerText = text;
+            const modal = document.getElementById('customModal');
+            const content = document.getElementById('modalContent');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('customModal');
+            const content = document.getElementById('modalContent');
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        }
+
+        // --- SIMULATION INITIALIZATION ---
+        function initCharges() {
+            // Clear existing
+            elements.sweater.innerHTML = '';
+            elements.balloon.innerHTML = '<div class="balloon-tie"></div>';
+            elements.wall.innerHTML = '';
+            state.sweaterCharges = [];
+            state.balloonCharges = [];
+            state.wallCharges = [];
+
+            const createCharge = (type, parentRect, isWall = false) => {
+                const el = document.createElement('div');
+                el.className = `charge ${type === '+' ? 'charge-pos' : 'charge-neg'}`;
+                
+                // Random position within parent
+                let x = Math.random() * (parentRect.width - 24) + 4;
+                let y = Math.random() * (parentRect.height - 24) + 4;
+                
+                if (isWall) {
+                    // Organize wall charges in a grid-like structure for better visual polarization
+                    x = (state.wallCharges.length % 2 === 0 ? 10 : 40) + (Math.random() * 10 - 5);
+                    y = Math.floor(state.wallCharges.length / 2) * 20 + 20 + (Math.random() * 10 - 5);
+                }
+
+                el.style.left = `${x}px`;
+                el.style.top = `${y}px`;
+                
+                return { element: el, type: type, originalX: x, originalY: y, currentX: x, currentY: y };
+            };
+
+            // Populate Sweater (Lots of +, Lots of -)
+            const swRect = {width: 180, height: 280}; // approximate sizes for spread
+            for (let i = 0; i < 25; i++) {
+                let pos = createCharge('+', swRect);
+                let neg = createCharge('-', swRect);
+                elements.sweater.appendChild(pos.element);
+                elements.sweater.appendChild(neg.element);
+                state.sweaterCharges.push(pos, neg);
+            }
+
+            // Populate Balloon (Few +, Few -)
+            const blRect = {width: 100, height: 120};
+            for (let i = 0; i < 4; i++) {
+                let pos = createCharge('+', blRect);
+                let neg = createCharge('-', blRect);
+                elements.balloon.appendChild(pos.element);
+                elements.balloon.appendChild(neg.element);
+                state.balloonCharges.push(pos, neg);
+            }
+
+            // Populate Wall (Grid-ish +, Grid-ish -)
+            const wallRect = elements.wall.getBoundingClientRect();
+            const wallH = wallRect.height || window.innerHeight * 0.6;
+            for(let y = 30; y < wallH - 30; y += 30) {
+                let posX = 20, negX = 50;
+                let posEl = document.createElement('div'); posEl.className = 'charge charge-pos';
+                let negEl = document.createElement('div'); negEl.className = 'charge charge-neg';
+                posEl.style.left = posX+'px'; posEl.style.top = y+'px';
+                negEl.style.left = negX+'px'; negEl.style.top = y+'px';
+                
+                elements.wall.appendChild(posEl);
+                elements.wall.appendChild(negEl);
+                
+                state.wallCharges.push(
+                    {element: posEl, type: '+', originalX: posX, originalY: y},
+                    {element: negEl, type: '-', originalX: negX, originalY: y}
+                );
+            }
+
+            // Reset Balloon position
+            elements.balloon.style.left = `50%`;
+            elements.balloon.style.top = `50%`;
+            elements.balloon.style.transform = `translate(-50%, -50%)`;
+        }
+
+        // --- DRAG AND DROP LOGIC ---
+        let dragOffset = { x: 0, y: 0 };
+        let animationFrame;
+
+        function startDrag(e) {
+            state.isDragging = true;
+            elements.balloon.style.transition = 'none';
+            
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            const rect = elements.balloon.getBoundingClientRect();
+            const simRect = elements.simArea.getBoundingClientRect();
+            
+            // Current center of balloon relative to container
+            const currentX = rect.left + rect.width/2 - simRect.left;
+            const currentY = rect.top + rect.height/2 - simRect.top;
+            
+            dragOffset.x = clientX - simRect.left - currentX;
+            dragOffset.y = clientY - simRect.top - currentY;
+        }
+
+        function doDrag(e) {
+            if (!state.isDragging) return;
+            e.preventDefault(); // Prevent scrolling on touch
+            
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const simRect = elements.simArea.getBoundingClientRect();
+            
+            let newX = clientX - simRect.left - dragOffset.x;
+            let newY = clientY - simRect.top - dragOffset.y;
+            
+            elements.balloon.style.left = `${newX}px`;
+            elements.balloon.style.top = `${newY}px`;
+            elements.balloon.style.transform = `translate(-50%, -50%)`;
+
+            checkInteractions();
+        }
+
+        function endDrag() {
+            if (!state.isDragging) return;
+            state.isDragging = false;
+            elements.balloon.style.transition = 'left 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)';
+            
+            // Check snapping due to electrostatic force
+            applyElectrostaticForces();
+        }
+
+        elements.balloon.addEventListener('mousedown', startDrag);
+        window.addEventListener('mousemove', doDrag);
+        window.addEventListener('mouseup', endDrag);
+        
+        elements.balloon.addEventListener('touchstart', startDrag, {passive: false});
+        window.addEventListener('touchmove', doDrag, {passive: false});
+        window.addEventListener('touchend', endDrag);
+
+        // --- PHYSICS INTERACTIONS ---
+        function checkInteractions() {
+            const bRect = elements.balloon.getBoundingClientRect();
+            const sRect = elements.sweater.getBoundingClientRect();
+            const wRect = elements.wall.getBoundingClientRect();
+            
+            // 1. Rubbing with Sweater (Transfer Electrons)
+            const isOverlappingSweater = !(bRect.right < sRect.left || bRect.left > sRect.right || bRect.bottom < sRect.top || bRect.top > sRect.bottom);
+            
+            if (isOverlappingSweater) {
+                state.rubbingCooldown++;
+                if (state.rubbingCooldown > 5) { // Throttle transfer rate
+                    transferElectron();
+                    state.rubbingCooldown = 0;
+                }
+            } else {
+                state.rubbingCooldown = 0;
+            }
+
+            // 2. Wall Polarization
+            // Calculate distance to wall
+            const distanceToWall = wRect.left - bRect.right;
+            const threshold = 200; // Activation distance
+            
+            // Calculate net negative charge on balloon
+            const netCharge = state.balloonCharges.filter(c => c.type === '-').length - state.balloonCharges.filter(c => c.type === '+').length;
+
+            state.wallCharges.forEach(charge => {
+                if (charge.type === '-') {
+                    if (distanceToWall < threshold && distanceToWall > -100 && netCharge > 0) {
+                        // Push electron rightward
+                        const pushFactor = (1 - (distanceToWall / threshold)) * (netCharge * 1.5);
+                        charge.element.style.left = `${charge.originalX + pushFactor}px`;
+                    } else {
+                        charge.element.style.left = `${charge.originalX}px`;
+                    }
+                }
+            });
+        }
+
+        function transferElectron() {
+            // Find a negative charge on the sweater
+            const negChargeIndex = state.sweaterCharges.findIndex(c => c.type === '-');
+            if (negChargeIndex !== -1) {
+                const charge = state.sweaterCharges[negChargeIndex];
+                
+                // Remove from sweater state
+                state.sweaterCharges.splice(negChargeIndex, 1);
+                
+                // Visually move it to balloon
+                const bRect = elements.balloon.getBoundingClientRect();
+                const simRect = elements.simArea.getBoundingClientRect();
+                
+                // New position relative to balloon center
+                const newX = Math.random() * 60 + 20; 
+                const newY = Math.random() * 80 + 20;
+                
+                charge.element.style.left = `${newX}px`;
+                charge.element.style.top = `${newY}px`;
+                
+                elements.sweater.removeChild(charge.element);
+                elements.balloon.appendChild(charge.element);
+                
+                state.balloonCharges.push(charge);
+            }
+        }
+
+        function applyElectrostaticForces() {
+            // Very simplified force simulation
+            const netChargeBalloon = state.balloonCharges.filter(c => c.type === '-').length - state.balloonCharges.filter(c => c.type === '+').length;
+            
+            if (netChargeBalloon === 0) return; // Neutral balloon doesn't move
+
+            const bRect = elements.balloon.getBoundingClientRect();
+            const sRect = elements.sweater.getBoundingClientRect();
+            const wRect = elements.wall.getBoundingClientRect();
+            const simRect = elements.simArea.getBoundingClientRect();
+
+            // Distance to sweater
+            const distSweaterX = (sRect.left + sRect.width/2) - (bRect.left + bRect.width/2);
+            const distSweaterY = (sRect.top + sRect.height/2) - (bRect.top + bRect.height/2);
+            const distSweater = Math.sqrt(distSweaterX*distSweaterX + distSweaterY*distSweaterY);
+
+            // Distance to wall
+            const distWall = wRect.left - bRect.right;
+
+            // If close to sweater and sweater is now net positive
+            if (distSweater < 300 && netChargeBalloon > 0) {
+                // Snap to sweater
+                elements.balloon.style.left = `${sRect.left + sRect.width/2 + 50 - simRect.left}px`;
+                elements.balloon.style.top = `${sRect.top + sRect.height/2 - simRect.top}px`;
+            } 
+            // If close to wall and wall is polarized
+            else if (distWall < 150 && netChargeBalloon > 0) {
+                // Snap to wall
+                elements.balloon.style.left = `${wRect.left - bRect.width/2 - simRect.left}px`;
+            }
+        }
+
+        function resetSimulation() {
+            initCharges();
+            showModal("Berhasil", "Simulasi telah direset. Balon, baju, dan dinding kembali ke keadaan netral.");
+        }
+
+        // Initialize on load
+        window.onload = () => {
+            initCharges();
+        };
+
+        // --- GEMINI TTS (WebAR Voice) LOGIC ---
+        
+        // Helper: Convert Base64 to ArrayBuffer
+        function base64ToArrayBuffer(base64) {
+            var binary_string = window.atob(base64);
+            var len = binary_string.length;
+            var bytes = new Uint8Array(len);
+            for (var i = 0; i < len; i++) {
+                bytes[i] = binary_string.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        // Helper: Convert PCM to WAV
+        function pcmToWav(pcmData, sampleRate) {
+            const numChannels = 1;
+            const bitsPerSample = 16;
+            const blockAlign = numChannels * bitsPerSample / 8;
+            const byteRate = sampleRate * blockAlign;
+            const dataSize = pcmData.length * 2;
+            const buffer = new ArrayBuffer(44 + dataSize);
+            const view = new DataView(buffer);
+
+            // RIFF chunk descriptor
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + dataSize, true);
+            writeString(view, 8, 'WAVE');
+            
+            // fmt sub-chunk
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true); 
+            view.setUint16(20, 1, true); 
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitsPerSample, true);
+            
+            // data sub-chunk
+            writeString(view, 36, 'data');
+            view.setUint32(40, dataSize, true);
+
+            // Write PCM data
+            let offset = 44;
+            for (let i = 0; i < pcmData.length; i++, offset += 2) {
+                view.setInt16(offset, pcmData[i], true);
+            }
+
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        async function playWebARVoice() {
+            if (state.audioPlaying) return;
+            
+            const btn = document.getElementById('btnTts');
+            const icon = document.getElementById('ttsIcon');
+            const textSpan = document.getElementById('ttsText');
+            
+            // Loading State
+            btn.classList.replace('bg-blue-600', 'bg-blue-400');
+            icon.className = '';
+            icon.classList.add('loader');
+            textSpan.innerText = 'Menyiapkan Suara...';
+            state.audioPlaying = true;
+
+            const textToSpeak = "Halo. Selamat datang di simulasi Listrik Statis. Pernahkah kamu menyisir rambut yang kering dengan sisir plastik, lalu melihat rambutmu tertarik ke arah sisir? Atau ketika kamu memakai baju wol lalu merasakan kejutan listrik kecil? Mengapa benda-benda yang awalnya netral bisa tiba-tiba memiliki gaya tarik-menarik? Mari kita selidiki menggunakan simulasi balon dan baju wol ini. Perhatikan baik-baik perpindahan muatannya.";
+            
+            const payload = {
+                contents: [{
+                    parts: [{ text: textToSpeak }]
+                }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: { voiceName: "Puck" } // Using an upbeat voice
+                        }
+                    }
+                },
+                model: "gemini-2.5-flash-preview-tts"
+            };
+
+            const apiKey = ""; // API Key handled by Canvas environment
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error("Gagal menghubungi server suara.");
+
+                const result = await response.json();
+                const part = result?.candidates?.[0]?.content?.parts?.[0];
+                const audioData = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType;
+
+                if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                    const sampleRateMatch = mimeType.match(/rate=(\d+)/);
+                    const sampleRate = sampleRateMatch ? parseInt(sampleRateMatch[1], 10) : 24000;
+                    
+                    const pcmBuffer = base64ToArrayBuffer(audioData);
+                    const pcm16 = new Int16Array(pcmBuffer);
+                    const wavBlob = pcmToWav(pcm16, sampleRate);
+                    const audioUrl = URL.createObjectURL(wavBlob);
+                    
+                    const audio = new Audio(audioUrl);
+                    
+                    // Update UI for playing state
+                    icon.className = 'fa-solid fa-volume-high mr-2';
+                    textSpan.innerText = 'Sedang Berbicara...';
+                    btn.classList.replace('bg-blue-400', 'bg-green-500');
+
+                    audio.onended = () => {
+                        resetTtsButton();
+                    };
+                    
+                    audio.onerror = () => {
+                        throw new Error("Gagal memutar audio.");
+                    };
+
+                    await audio.play();
+                    
+                } else {
+                    throw new Error("Format audio tidak didukung dari server.");
+                }
+
+            } catch (error) {
+                console.error("TTS Error:", error);
+                showModal("Error Suara WebAR", "Maaf, gagal memuat suara asisten. Pastikan koneksi internet stabil atau coba lagi nanti.");
+                resetTtsButton();
+            }
+        }
+
+        function resetTtsButton() {
+            const btn = document.getElementById('btnTts');
+            const icon = document.getElementById('ttsIcon');
+            const textSpan = document.getElementById('ttsText');
+            
+            btn.classList.remove('bg-blue-400', 'bg-green-500');
+            btn.classList.add('bg-blue-600');
+            icon.className = 'fa-solid fa-headphones mr-2';
+            textSpan.innerText = 'Dengarkan Asisten WebAR';
+            state.audioPlaying = false;
+        }
+    </script>
+</body>
+</html>
